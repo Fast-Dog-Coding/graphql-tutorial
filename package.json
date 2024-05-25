@@ -1,0 +1,27 @@
+{
+  "name": "graphql-tutorial",
+  "version": "1.0.0",
+  "description": "A GraphQL tutorial project built in Node.js. Built as a project from a course, [GraphQL Crash Course](https://youtube.com/playlist?list=PL4cUxeGkcC9gUxtblNUahcsg0WLxmrK_y&amp;si=ejU9djFB0fvYKJZB) by NetNinja.",
+  "main": "index.js",
+  "scripts": {
+    "compile": "tsc",
+    "start": "npm run compile && node ./dist/src/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Fast-Dog-Coding/graphql-tutorial.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@apollo/server": "^4.10.4",
+    "graphql": "^16.8.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.12",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  }
+}
