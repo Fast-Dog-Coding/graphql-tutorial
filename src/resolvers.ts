@@ -1,66 +1,23 @@
-import { Author, BaseEntity, Game, Review } from '../types';
+import {
+  AddAuthorInput,
+  AddGameInput,
+  AddReviewInput,
+  Author,
+  EditAuthorInput,
+  EditGameInput,
+  EditReviewInput,
+  Game,
+  Review
+} from '../types';
 import data from '../data/index.js';
-import { v4 as uuidv4 } from 'uuid';
+import FileAdapter from './adapters/fileAdapter.js';
 
-/**
- * Generates and returns unique ID
- */
-const generateId = (): string => uuidv4();
+// INFO: dbAdapter can be swapped out for a different `dbAdapter` (Data Source)
+// import { MongoAdapter } from './adapters/mongoAdapter';
+// const dbAdapter = new MongoAdapter();
 
-/**
- * Adds an entity to the collection.
- *
- * @param collection
- * @param entity
- * @return The new entity
- */
-const addEntity = <T extends BaseEntity>(collection: T[], entity: Omit<T, 'id'>): T => {
-  const newEntity: T = { id: generateId(), ...entity } as T;
-  collection.push(newEntity);
-
-  return newEntity;
-};
-
-/**
- * Removes an entity from the collection and returns the new collection.
- *
- * @param collection
- * @param id
- * @return The new collection
- */
-const deleteEntity = <T extends BaseEntity>(collection: T[], id: string): T[] => {
-  const entityIndex = collection.findIndex(item => item.id === id);
-  if (entityIndex === -1) {
-    throw new Error(`Entity with ID ${id} not found`);
-  }
-  collection.splice(entityIndex, 1);
-  return collection;
-};
-
-/**
- * Updates an entity in the collection and returns the new collection and updated entity.
- *
- * @param collection
- * @param id
- * @param updates
- */
-const updateEntity = <T extends BaseEntity>(collection: T[], id: string, updates: Partial<Omit<T, 'id'>>): {
-  updatedCollection: T[],
-  updatedEntity: T | null
-} => {
-  let updatedEntity: T | null = null;
-  const updatedCollection = collection.map(item => {
-    if (item.id === id) {
-      updatedEntity = { ...item, ...updates } as T;
-      return updatedEntity;
-    }
-    return item;
-  });
-  if (!updatedEntity) {
-    throw new Error(`Entity with ID ${id} not found`);
-  }
-  return { updatedCollection, updatedEntity };
-};
+const dbAdapter = new FileAdapter();
+await dbAdapter.connect();
 
 const resolvers = {
   Query: {
@@ -69,8 +26,8 @@ const resolvers = {
      *
      * @returns An array of `authors`.
      */
-    authors(): Author[] {
-      return data.authors;
+    authors(): Promise<Author[]> {
+      return dbAdapter.fetchAuthors();
     },
 
     /**
@@ -80,12 +37,8 @@ const resolvers = {
      * @param args - Arguments containing the `id` of the `author` to retrieve.
      * @returns The `author` with the specified `id`.
      */
-    author(_: any, args: { id: string; }): Author {
-      const foundAuthor: Author = data.authors.find(a => a.id === args.id);
-      if (!foundAuthor) {
-        throw new Error(`Author with ID ${args.id} not found`);
-      }
-      return foundAuthor;
+    author(_: any, args: { id: string; }): Promise<Author> {
+      return dbAdapter.fetchAuthor(args.id);
     },
 
     /**
@@ -93,8 +46,8 @@ const resolvers = {
      *
      * @returns An array of `games`.
      */
-    games(): Game[] {
-      return data.games;
+    games(): Promise<Game[]> {
+      return dbAdapter.fetchGames();
     },
 
     /**
@@ -104,12 +57,8 @@ const resolvers = {
      * @param args - Arguments containing the `id` of the `game` to retrieve.
      * @returns The `game` with the specified `id`.
      */
-    game(_: any, args: { id: string; }): Game {
-      const foundGame: Game = data.games.find(g => g.id === args.id);
-      if (!foundGame) {
-        throw new Error(`Game with ID ${args.id} not found`);
-      }
-      return foundGame;
+    game(_: any, args: { id: string; }): Promise<Game> {
+      return dbAdapter.fetchGame(args.id);
     },
 
     /**
@@ -117,8 +66,8 @@ const resolvers = {
      *
      * @returns An array of `reviews`.
      */
-    reviews(): Review[] {
-      return data.reviews;
+    reviews(): Promise<Review[]> {
+      return dbAdapter.fetchReviews();
     },
 
     /**
@@ -127,13 +76,9 @@ const resolvers = {
      * @param args - Arguments containing the id of the review to retrieve.
      * @returns The review with the specified id.
      */
-    review(_: any, args: { id: string; }): Review {
-      const foundReview: Review = data.reviews.find(g => g.id === args.id);
-      if (!foundReview) {
-        throw new Error(`Review with ID ${args.id} not found`);
-      }
-      return foundReview;
-    },
+    review(_: any, args: { id: string; }): Promise<Review> {
+      return dbAdapter.fetchReview(args.id);
+    }
   },
 
   Mutation: {
@@ -144,8 +89,8 @@ const resolvers = {
      * @param args - Arguments containing the `author` data (without `id`).
      * @returns The newly added `author`.
      */
-    addAuthor(_: any, args: { author: Omit<Author, 'id'> }): Author {
-      return addEntity(data.authors, args.author);
+    addAuthor(_: any, args: { author: AddAuthorInput }): Promise<Author> {
+      return dbAdapter.addAuthor(args.author);
     },
 
     /**
@@ -153,11 +98,10 @@ const resolvers = {
      *
      * @param _ - Unused `parent` argument.
      * @param args - Arguments containing the `id` of the `author` to delete.
-     * @returns The updated `authors` collection.
+     * @returns The `id` of the deleted `author`.
      */
-    deleteAuthor(_: any, args: { id: string; }): Author[] {
-      data.authors = deleteEntity(data.authors, args.id);
-      return data.authors;
+    deleteAuthor(_: any, args: { id: string; }): Promise<string> {
+      return dbAdapter.deleteAuthor(args.id);
     },
 
     /**
@@ -167,10 +111,8 @@ const resolvers = {
      * @param args - Arguments containing the `id` of the `author` to update and the updated `author` data.
      * @returns The updated `author`.
      */
-    updateAuthor(_: any, args: { id: string; author: Partial<Omit<Author, 'id'>> }): Author {
-      const { updatedCollection, updatedEntity } = updateEntity(data.authors, args.id, args.author);
-      data.authors = updatedCollection;
-      return updatedEntity;
+    updateAuthor(_: any, args: { id: string; author: EditAuthorInput }): Promise<Author> {
+      return dbAdapter.updateAuthor(args.id, args.author);
     },
 
     /**
@@ -180,8 +122,8 @@ const resolvers = {
      * @param args - Arguments containing the `game` data (without `id`).
      * @returns The newly added `game`.
      */
-    addGame(_: any, args: { game: Omit<Game, 'id'> }): Game {
-      return addEntity(data.games, args.game);
+    addGame(_: any, args: { game: AddGameInput }): Promise<Game> {
+      return dbAdapter.addGame(args.game);
     },
 
     /**
@@ -189,11 +131,10 @@ const resolvers = {
      *
      * @param _ - Unused `parent` argument.
      * @param args - Arguments containing the `id` of the `game` to delete.
-     * @returns The updated `games` collection.
+     * @returns The `id` of the deleted `game`.
      */
-    deleteGame(_: any, args: { id: string; }): Game[] {
-      data.games = deleteEntity(data.games, args.id);
-      return data.games;
+    deleteGame(_: any, args: { id: string; }): Promise<string> {
+      return dbAdapter.deleteGame(args.id);
     },
 
     /**
@@ -203,10 +144,8 @@ const resolvers = {
      * @param args - Arguments containing the `id` of the `game` to update and the updated `game` data.
      * @returns The updated `game`.
      */
-    updateGame(_: any, args: { id: string; game: Partial<Omit<Game, 'id'>> }): Game {
-      const { updatedCollection, updatedEntity } = updateEntity(data.games, args.id, args.game);
-      data.games = updatedCollection;
-      return updatedEntity;
+    updateGame(_: any, args: { id: string; game: EditGameInput }): Promise<Game> {
+      return dbAdapter.updateGame(args.id, args.game);
     },
 
     /**
@@ -216,8 +155,8 @@ const resolvers = {
      * @param args - Arguments containing the `review` data (without `id`).
      * @returns The newly added `review`.
      */
-    addReview(_: any, args: { review: Omit<Review, 'id'> }): Review {
-      return addEntity(data.reviews, args.review);
+    addReview(_: any, args: { review: AddReviewInput }): Promise<Review> {
+      return dbAdapter.addReview(args.review);
     },
 
     /**
@@ -225,11 +164,10 @@ const resolvers = {
      *
      * @param _ - Unused `parent` argument.
      * @param args - Arguments containing the `id` of the `review` to delete.
-     * @returns The updated `reviews` collection.
+     * @returns The `id` of the deleted `review`.
      */
-    deleteReview(_: any, args: { id: string; }): Review[] {
-      data.reviews = deleteEntity(data.reviews, args.id);
-      return data.reviews;
+    deleteReview(_: any, args: { id: string; }): Promise<string> {
+      return dbAdapter.deleteReview(args.id);
     },
 
     /**
@@ -239,10 +177,8 @@ const resolvers = {
      * @param args - Arguments containing the `id` of the `review` to update and the updated `review` data.
      * @returns The updated `review`.
      */
-    updateReview(_: any, args: { id: string; review: Partial<Omit<Review, 'id'>> }): Review {
-      const { updatedCollection, updatedEntity } = updateEntity(data.reviews, args.id, args.review);
-      data.reviews = updatedCollection;
-      return updatedEntity;
+    updateReview(_: any, args: { id: string; review: EditReviewInput }): Promise<Review> {
+      return dbAdapter.updateReview(args.id, args.review);
     }
   },
 
@@ -277,8 +213,8 @@ const resolvers = {
      * @param review - The `review` object.
      * @returns The `author` of the specified `review`.
      */
-    author(review: Review): Author {
-      return data.authors.find(a => a.id === review.author_id);
+    author(review: Review): Promise<Author> {
+      return dbAdapter.fetchAuthor(review.author_id);
     },
 
     /**
@@ -287,8 +223,8 @@ const resolvers = {
      * @param review - The `review` object.
      * @returns The `game` of the specified `review`.
      */
-    game(review: Review): Game {
-      return data.games.find(g => g.id === review.game_id);
+    game(review: Review): Promise<Game> {
+      return dbAdapter.fetchGame(review.game_id);
     }
   }
 }

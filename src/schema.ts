@@ -7,14 +7,14 @@ type Author {
     id: ID!
     name: String!
     verified: Boolean!
-    reviews: [Review!]!
+    reviews: [Review!]
 }
 
 type Game {
     id: ID!
     title: String!
     platform: [String!]!
-    reviews: [Review!]!
+    reviews: [Review!]
 }
 
 type Review {
@@ -36,13 +36,13 @@ type Query {
 
 type Mutation {
     addAuthor(author: AddAuthorInput!): Author!
-    deleteAuthor(id: ID!): [Author!]!
+    deleteAuthor(id: ID!): ID!
     updateAuthor(id: ID!, author: EditAuthorInput!): Author!
     addGame(game: AddGameInput!): Game!
-    deleteGame(id: ID!): [Game!]!
+    deleteGame(id: ID!): ID!
     updateGame(id: ID!, game: EditGameInput!): Game!
     addReview(review: AddReviewInput!): Review!
-    deleteReview(id: ID!): [Review!]!
+    deleteReview(id: ID!): ID!
     updateReview(id: ID!, review: EditReviewInput!): Review!
 }
 
