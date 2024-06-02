@@ -106,4 +106,4 @@ This project is licensed under the ISC License.
 
 ## Copyright
 
-© Fast Dog Coding, LLC., 2014
+Copyright © 2024 Fast Dog Coding
